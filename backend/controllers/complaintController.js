@@ -182,3 +182,30 @@ export const verifyComplaint = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+export const addComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    const comment = {
+      text,
+      user: req.user._id,
+      role: req.user.role,
+      createdAt: new Date(),
+    };
+
+    complaint.comments.push(comment);
+
+    await complaint.save();
+
+    res.json({ message: 'Comment added successfully' });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
