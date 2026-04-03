@@ -209,3 +209,87 @@ export const addComment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+export const assignComplaint = async (req, res) => {
+  try {
+    const { workerId } = req.body;
+
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Not found' });
+
+    complaint.assignedTo = workerId;
+    await complaint.save();
+
+    res.json({ message: 'Assigned successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const getComplaints = async (req, res) => {
+  try {
+    const complaints = await Complaint.find()
+      .populate('assignedTo', 'name department')
+      .sort({ createdAt: -1 });
+
+    res.json(complaints);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const getAssignedComplaints = async (req, res) => {
+  try {
+    const complaints = await Complaint.find({ assignedTo: req.user._id });
+
+    res.json(complaints);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const updateComplaintStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Not found' });
+
+    complaint.status = status;
+    pushHistory(complaint, status, req.user.name);
+
+    await complaint.save();
+
+    res.json({ message: 'Status updated' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const markWorkDone = async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) return res.status(404).json({ message: 'Not found' });
+
+    complaint.status = 'Completed';
+    pushHistory(complaint, 'Completed', req.user.name);
+
+    await complaint.save();
+
+    res.json({ message: 'Work marked done' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const getWorkerStats = async (req, res) => {
+  try {
+    const stats = await Complaint.aggregate([
+      {
+        $group: {
+          _id: '$assignedTo',
+          total: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
